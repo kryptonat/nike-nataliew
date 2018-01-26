@@ -1,0 +1,100 @@
+service: nike-nataliew
+
+plugins:
+  - serverless-python-requirements
+
+provider:
+  name: aws
+  runtime: python2.7
+  region: us-west-1
+  stage: v1
+  environment:
+    DYNAMODB_TABLE: ${self:service}-${opt:stage, self:provider.stage}
+  iamRoleStatements:
+  - Effect: Allow
+    Action:
+      - dynamodb:Query
+      - dynamodb:Scan
+      - dynamodb:GetItem
+      - dynamodb:PutItem
+      - dynamodb:UpdateItem
+      - dynamodb:DeleteItem
+      - dynamodb:DescribeTable
+    Resource: "arn:aws:dynamodb:${opt:region, self:provider.region}:*:table/${self:provider.environment.DYNAMODB_TABLE}"
+
+functions:
+
+  list:
+    handler: model/list.list_all
+    events:
+      - http:
+          path: model
+          method: get
+          cors: true
+
+  get:
+    handler: model/get.get
+    events:
+      - http:
+          path: model/{key}
+          method: get
+          cors: true
+          integration: lambda
+          request:
+            paths:
+              key: true
+
+  add:
+    handler: model/add.add
+    events:
+      - http:
+          path: model/{key}
+          method: post
+          cors: true
+          integration: lambda
+          request:
+            paths:
+              key: true
+
+  update:
+    handler: model/update.update
+    events:
+      - http:
+          path: model/{key}
+          method: put
+          cors: true
+          integration: lambda
+          request:
+            paths:
+              key: true
+
+  delete:
+    handler: model/delete.delete
+    events:
+      - http:
+          path: model/{key}
+          method: delete
+          cors: true
+          integration: lambda
+          request:
+            paths:
+              key: true
+
+resources:
+  Resources:
+    GenericModelDynamoDbTable:
+      Type: 'AWS::DynamoDB::Table'
+      DeletionPolicy: Retain
+      Properties:
+        AttributeDefinitions:
+          -
+            AttributeName: key
+            AttributeType: S
+        KeySchema:
+          -
+            AttributeName: key
+            KeyType: HASH
+        ProvisionedThroughput:
+          ReadCapacityUnits: 1
+          WriteCapacityUnits: 1
+        TableName: ${self:provider.environment.DYNAMODB_TABLE}
